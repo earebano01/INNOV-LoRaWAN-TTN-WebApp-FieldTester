@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>INNOV LoRaWAN Field Tracker</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
+    <link rel="stylesheet" href="{{url_for('static', filename='leaflet/leaflet.css')}}"/>
+    <link rel="stylesheet" href="{{url_for('static', filename='fontawesome/css/all.css')}}" />
+    <link rel="stylesheet" href="{{url_for('static', filename='leaflet-measure/leaflet-measure.css')}}" />
+    <link rel="stylesheet" href="{{url_for('static', filename='leaflet-locatecontrol/L.Control.Locate.mapbox.min.css')}}" />
+
+    <script src="{{url_for('static', filename='jquery-3.3.1.min.js')}}"></script>
+    <script src="{{url_for('static', filename='leaflet/leaflet.js')}}"></script>
+    <script src="{{url_for('static', filename='leaflet-edgescalebar/leaflet.edgescalebar.js')}}"></script>
+    <script src="{{url_for('static', filename='leaflet-measure/leaflet-measure.js')}}"></script>
+    <script src="{{url_for('static', filename='leaflet-locatecontrol/L.Control.Locate.min.js')}}"></script>
+    <script src="{{url_for('static', filename='leaflet-bing-layer.min.js')}}"></script>
+    <script src="{{url_for('static', filename='esri-leaflet.js')}}"></script>
+  </head>
+  <body>
+
+    <div id="mapid" style="height: 98vh; width: 100%"></div>
+
+    <script>
+      var osm_Link = '<a href="http://openstreetmap.org">OpenStreetMap</a>',
+          otm_Link = '<a href="http://opentopomap.org/">OpenTopoMap</a>',
+          bing_Link = '<a href="http://bing.com/">Bing</a>',
+          google_Link = '<a href="http://google.com/">Google</a>';
+
+      var osm_Url = 'http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+          osm_Attrib = '&copy; ' + osm_Link + ' Contributors',
+          otm_Url = 'http://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+          otm_Attrib = '&copy; ' + otm_Link + ' Contributors ',
+          bing_Attrib = '&copy; ' + bing_Link + ' Contributors',
+          google_Url = 'http://mt.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+          google_Attrib = '&copy; ' + google_Link + ' Contributors';
+
+      var osm_Map = L.tileLayer(osm_Url, {attribution: osm_Attrib}),
+          esri_Map = L.esri.basemapLayer("Topographic"),
+          otm_Map = L.tileLayer(otm_Url, {attribution: otm_Attrib}),
+          google_Map = L.tileLayer(google_Url, {attribution: google_Attrib})
+
+      {%- if bing_api_key %},
+          bing_dark = L.tileLayer.bing({bingMapsKey: '{{bing_api_key}}', imagerySet: 'CanvasDark', attribution: bing_Attrib}),
+          bing_sat = L.tileLayer.bing({bingMapsKey: '{{bing_api_key}}', imagerySet: 'Aerial', attribution: bing_Attrib}),
+          bing_sat_labels = L.tileLayer.bing({bingMapsKey: '{{bing_api_key}}', imagerySet: 'AerialWithLabels', attribution: bing_Attrib})
+      {% endif -%}
+          ;
+
+      //Create a map that remembers where it was zoomed to
+      function boundsChanged () {
+        localStorage.setItem('bounds', JSON.stringify(map.getBounds()));
+        default_zoom = false;
+      }
+
+      var map;
+      var default_zoom = true;
+
+      b = JSON.parse(localStorage.getItem('bounds'));
+      if (b == null) {
+        map = L.map('mapid', {layers: [esri_Map]}).setView([{{start_lat}}, {{start_lon}}], 15);
+      }
+      else {
+        map = L.map('mapid', {layers: [esri_Map]});
+        try {
+          map.fitBounds([[b._southWest.lat%90,b._southWest.lng%180],[b._northEast.lat%90,b._northEast.lng%180]]);
+          default_zoom = false;
+        } catch (err) {
+          map.setView([{{start_lat}}, {{start_lon}}], 15);
+        }
+      }
+
+      map.on('dragend', boundsChanged);
+      map.on('zoomend', boundsChanged);
+
+      //disable inertia because it is irritating and slow
+      map.options.inertia=false;
+
+      var measureControl = L.control.measure({
+        activeColor: '#FF0000',
+        completedColor: '#FF8000',
+        primaryLengthUnit: 'miles',
+        secondaryLengthUnit: 'kilometers'
+      });
+      measureControl.addTo(map);
+
+      L.control.locate().addTo(map);
+
+      L.edgeScaleBar().addTo(map);
+
+      var baseLayers = {
+          "Topographic": esri_Map,
+          "OpenStreetMap": osm_Map,
+          "OpenTopoMap": otm_Map,
+          "Google": google_Map,
+        {%- if bing_api_key %}
+          "Bing (Dark)": bing_dark,
+          "Bing Satellite": bing_sat,
+          "Bing Satellite (w Labels)": bing_sat_labels
+        {% endif %}
+      };
+      L.control.layers(baseLayers).addTo(map);
+
+      map.on('click', function(e) {
+        console.log("Clicked: " + e.latlng.lat + ", " + e.latlng.lng);
+      });
+
+      {% for each_gateway in gateway_locations %}
+      var gateway = L.marker([{{each_gateway[1]}}, {{each_gateway[2]}}]).bindPopup('Gateway: {{each_gateway[0]}}<br />Lat/Lon: {{each_gateway[1]}}, {{each_gateway[2]}}').addTo(map);
+      var gatewayCircle = L.circle([{{each_gateway[1]}}, {{each_gateway[2]}}], {
+          color: 'blue',
+          fillColor: 'blue',
+          fillOpacity: 0.1,
+          radius: 15000  
+      }).addTo(map);
+      {% endfor %}
+
+
+      var markers = {};
+      {% for each_device in devices %}
+      markers['{{each_device}}'] = new L.FeatureGroup();
+      map.addLayer(markers['{{each_device}}']);
+      {% endfor %}
+
+      var legend_age = L.control({position: 'topright'});
+      legend_age.onAdd = function(map) {
+        var div = L.DomUtil.create('div', 'info legend_age');
+        div.innerHTML = '<select>' +
+            '<option value="all">All markers</option>' +
+            '<option value="7day">Past 7 Days</option>' +
+            '<option value="1day">Past 1 Day</option>' +
+            '<option value="6hour">Past 6 Hours</option>' +
+            '<option value="1hour">Past 1 Hour</option>' +
+            '<option value="30min">Past 30 Min</option>' +
+            '</select>';
+        div.firstChild.onmousedown = div.firstChild.ondblclick = L.DomEvent.stopPropagation;
+        return div;
+      };
+      legend_age.addTo(map);
+
+      function toggleFunction(element) {
+        if (element.checked) {
+          map.addLayer(markers[element.value]);
+        } else {
+          map.removeLayer(markers[element.value]);
+        }
+      }
+
+      var legend_devices = L.control({position: 'topright'});
+      legend_devices.onAdd = function(map) {
+        var div = L.DomUtil.create('div');
+        div.innerHTML = `
+        <div class="leaflet-control-layers leaflet-control-layers-expanded">
+          <form>
+            {% for each_device in devices -%}
+            <div>
+              <input class="leaflet-control-layers-overlays" id="command"
+                onclick=toggleFunction(this) type="checkbox" value="{{each_device}}" checked>{{each_device}}</input>
+            </div>
+            {%- endfor %}
+          </form>
+        </div>`;
+        return div;
+      };
+      legend_devices.addTo(map);
+
+    function add_new_markers(past_seconds) {
+    var url = '/past/' + past_seconds;
+    $.getJSON(url,
+        function(data, responseText, jqXHR) {
+            if (jqXHR.status !== 204) {
+                for (i = 0; i < data.length; i++) {
+                    var rssi = parseInt(data[i]["rssi"]);
+                    var color = 'red';
+                    if (rssi > -70) {
+                        color = 'green';
+                    } else if (rssi > -85) {
+                        color = 'yellow'; 
+                    }
+
+                    var node = L.circleMarker([parseFloat(data[i]["latitude"]), parseFloat(data[i]["longitude"])], {
+                        color: color,
+                        radius: 5
+                    });
+
+                    var popupContent = '<b>Node:</b> ' + data[i]["device_id"] + '<br />' +
+                        '<b>Gateway ID:</b> ' + data[i]["gateway_id"] + '<br />' +
+                        '<b>Lat/Lon:</b> ' + data[i]["latitude"] + ', ' + data[i]["longitude"] + '<br />' +
+                        '<b>Temperature:</b> ' + data[i]["temperature"] + '°C<br />' +
+                        '<b>Humidity:</b> ' + data[i]["humidity"] + '%<br />' +
+                        '<b>RSSI:</b> ' + data[i]["rssi"] + ' dBm<br />' +
+                        '<b>SNR:</b> ' + data[i]["snr"] + ' dB<br />' +
+                        '<b>Date:</b> ' + formatDate(data[i]["datetime"]) + '<br />' +
+                        '<b>Time:</b> ' + formatTime(data[i]["datetime"]);
+
+                    node.bindPopup(popupContent);
+                    markers[data[i]["device_id"]].addLayer(node);
+                }
+            }
+        }
+    );
+}
+
+
+      function formatDate(datetime) {
+        var date = new Date(datetime);
+        return date.toLocaleDateString();
+      }
+
+      function formatTime(datetime) {
+        var time = new Date(datetime);
+        return time.toLocaleTimeString();
+      }
+
+
+
+      $('select').change(function(){
+        for (var key in markers) {
+          map.removeLayer(markers[key]);
+          markers[key] = new L.FeatureGroup();
+          map.addLayer(markers[key]);
+        }
+        if ($(this).val() === "all") {
+          add_new_markers(0);
+        } else if ($(this).val() === "7day") {
+          add_new_markers(604800);
+        } else if ($(this).val() === "1day") {
+          add_new_markers(86400);
+        } else if ($(this).val() === "6hour") {
+          add_new_markers(21600);
+        } else if ($(this).val() === "1hour") {
+          add_new_markers(3600);
+        } else if ($(this).val() === "30min") {
+          add_new_markers(1800);
+        }
+      });
+
+      function repeat_add_new_markers(past_seconds) {
+        setInterval(function () {
+          add_new_markers(past_seconds)
+        }, Number(past_seconds) * 1000);
+      }
+
+      add_new_markers('0');
+
+      window.onload = function() {
+        repeat_add_new_markers('{{refresh_period_seconds}}');
+      };
+
+    </script>
+
+  </body>
+</html>
