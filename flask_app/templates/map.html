@@ -3,13 +3,16 @@
   <head>
     <title>INNOV LoRaWAN Field Tracker</title>
 
+    <!-- Balise meta pour la configuration de la vue -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
+    <!-- Chargement des feuilles de style -->
     <link rel="stylesheet" href="{{url_for('static', filename='leaflet/leaflet.css')}}"/>
     <link rel="stylesheet" href="{{url_for('static', filename='fontawesome/css/all.css')}}" />
     <link rel="stylesheet" href="{{url_for('static', filename='leaflet-measure/leaflet-measure.css')}}" />
     <link rel="stylesheet" href="{{url_for('static', filename='leaflet-locatecontrol/L.Control.Locate.mapbox.min.css')}}" />
 
+    <!-- Chargement des scripts -->
     <script src="{{url_for('static', filename='jquery-3.3.1.min.js')}}"></script>
     <script src="{{url_for('static', filename='leaflet/leaflet.js')}}"></script>
     <script src="{{url_for('static', filename='leaflet-edgescalebar/leaflet.edgescalebar.js')}}"></script>
@@ -20,14 +23,19 @@
   </head>
   <body>
 
+    <!-- Élément de la carte -->
     <div id="mapid" style="height: 98vh; width: 100%"></div>
 
+    <!-- Script JavaScript pour configurer la carte et gérer les interactions -->
     <script>
+
+      // Définition des différents fonds de carte
       var osm_Link = '<a href="http://openstreetmap.org">OpenStreetMap</a>',
           otm_Link = '<a href="http://opentopomap.org/">OpenTopoMap</a>',
           bing_Link = '<a href="http://bing.com/">Bing</a>',
           google_Link = '<a href="http://google.com/">Google</a>';
 
+      // URL des différentes tuiles de fond de carte
       var osm_Url = 'http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
           osm_Attrib = '&copy; ' + osm_Link + ' Contributors',
           otm_Url = 'http://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
@@ -36,24 +44,26 @@
           google_Url = 'http://mt.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
           google_Attrib = '&copy; ' + google_Link + ' Contributors';
 
+      // Initialisation des couches de carte avec les différentes tuiles
       var osm_Map = L.tileLayer(osm_Url, {attribution: osm_Attrib}),
           esri_Map = L.esri.basemapLayer("Topographic"),
           otm_Map = L.tileLayer(otm_Url, {attribution: otm_Attrib}),
           google_Map = L.tileLayer(google_Url, {attribution: google_Attrib})
 
+      // Ajout des couches de fond de carte à une liste
       {%- if bing_api_key %},
           bing_dark = L.tileLayer.bing({bingMapsKey: '{{bing_api_key}}', imagerySet: 'CanvasDark', attribution: bing_Attrib}),
           bing_sat = L.tileLayer.bing({bingMapsKey: '{{bing_api_key}}', imagerySet: 'Aerial', attribution: bing_Attrib}),
           bing_sat_labels = L.tileLayer.bing({bingMapsKey: '{{bing_api_key}}', imagerySet: 'AerialWithLabels', attribution: bing_Attrib})
-      {% endif -%}
-          ;
+      {% endif -%};
 
-      //Create a map that remembers where it was zoomed to
+      // Gestion de la sauvegarde de la position de la carte
       function boundsChanged () {
         localStorage.setItem('bounds', JSON.stringify(map.getBounds()));
         default_zoom = false;
       }
 
+      // Création de la carte avec gestion de la position sauvegardée
       var map;
       var default_zoom = true;
 
@@ -71,12 +81,14 @@
         }
       }
 
+      // Gestion des événements de déplacement et de zoom de la carte
       map.on('dragend', boundsChanged);
       map.on('zoomend', boundsChanged);
 
-      //disable inertia because it is irritating and slow
+      // Désactivation de l'inertie pour une meilleure expérience utilisateur
       map.options.inertia=false;
 
+      // Ajout des contrôles de mesure et de localisation à la carte
       var measureControl = L.control.measure({
         activeColor: '#FF0000',
         completedColor: '#FF8000',
@@ -89,6 +101,7 @@
 
       L.edgeScaleBar().addTo(map);
 
+      // Définition des différentes couches de fond de carte
       var baseLayers = {
           "Topographic": esri_Map,
           "OpenStreetMap": osm_Map,
@@ -100,12 +113,16 @@
           "Bing Satellite (w Labels)": bing_sat_labels
         {% endif %}
       };
+
+      // Ajout d'un contrôle pour basculer entre les couches de fond de carte
       L.control.layers(baseLayers).addTo(map);
 
+      // Gestion de l'événement de clic sur la carte
       map.on('click', function(e) {
         console.log("Clicked: " + e.latlng.lat + ", " + e.latlng.lng);
       });
 
+      // Ajout de marqueurs pour chaque passerelle avec un cercle autour
       {% for each_gateway in gateway_locations %}
       var gateway = L.marker([{{each_gateway[1]}}, {{each_gateway[2]}}]).bindPopup('Gateway: {{each_gateway[0]}}<br />Lat/Lon: {{each_gateway[1]}}, {{each_gateway[2]}}').addTo(map);
       var gatewayCircle = L.circle([{{each_gateway[1]}}, {{each_gateway[2]}}], {
@@ -116,13 +133,14 @@
       }).addTo(map);
       {% endfor %}
 
-
+      // Création d'une liste de marqueurs pour chaque périphérique
       var markers = {};
       {% for each_device in devices %}
       markers['{{each_device}}'] = new L.FeatureGroup();
       map.addLayer(markers['{{each_device}}']);
       {% endfor %}
 
+      // Contrôle pour sélectionner l'âge des marqueurs à afficher
       var legend_age = L.control({position: 'topright'});
       legend_age.onAdd = function(map) {
         var div = L.DomUtil.create('div', 'info legend_age');
@@ -139,6 +157,7 @@
       };
       legend_age.addTo(map);
 
+      // Fonction pour basculer l'affichage des marqueurs sur la carte en fonction de la case à cocher
       function toggleFunction(element) {
         if (element.checked) {
           map.addLayer(markers[element.value]);
@@ -147,6 +166,7 @@
         }
       }
 
+      // Contrôle des légendes des dispositifs affichés sur la carte
       var legend_devices = L.control({position: 'topright'});
       legend_devices.onAdd = function(map) {
         var div = L.DomUtil.create('div');
@@ -165,6 +185,7 @@
       };
       legend_devices.addTo(map);
 
+    // Fonction pour ajouter de nouveaux marqueurs sur la carte en fonction du nombre de secondes passées
     function add_new_markers(past_seconds) {
     var url = '/past/' + past_seconds;
     $.getJSON(url,
@@ -202,51 +223,54 @@
     );
 }
 
+    // Fonction pour formater la date à partir d'un objet datetime
+    function formatDate(datetime) {
+      var date = new Date(datetime);
+      return date.toLocaleDateString();
+    }
 
-      function formatDate(datetime) {
-        var date = new Date(datetime);
-        return date.toLocaleDateString();
+    // Fonction pour formater l'heure à partir d'un objet datetime
+    function formatTime(datetime) {
+      var time = new Date(datetime);
+      return time.toLocaleTimeString();
+    }
+
+    // Écouteur d'événement pour détecter les changements dans la sélection du menu déroulant
+    $('select').change(function(){
+      for (var key in markers) {
+        map.removeLayer(markers[key]);
+        markers[key] = new L.FeatureGroup();
+        map.addLayer(markers[key]);
       }
-
-      function formatTime(datetime) {
-        var time = new Date(datetime);
-        return time.toLocaleTimeString();
+      if ($(this).val() === "all") {
+        add_new_markers(0);
+      } else if ($(this).val() === "7day") {
+        add_new_markers(604800);
+      } else if ($(this).val() === "1day") {
+        add_new_markers(86400);
+      } else if ($(this).val() === "6hour") {
+        add_new_markers(21600);
+      } else if ($(this).val() === "1hour") {
+        add_new_markers(3600);
+      } else if ($(this).val() === "30min") {
+        add_new_markers(1800);
       }
+    });
 
+    // Fonction pour répéter l'ajout de nouveaux marqueurs à intervalles réguliers
+    function repeat_add_new_markers(past_seconds) {
+      setInterval(function () {
+        add_new_markers(past_seconds)
+      }, Number(past_seconds) * 1000);
+    }
 
-
-      $('select').change(function(){
-        for (var key in markers) {
-          map.removeLayer(markers[key]);
-          markers[key] = new L.FeatureGroup();
-          map.addLayer(markers[key]);
-        }
-        if ($(this).val() === "all") {
-          add_new_markers(0);
-        } else if ($(this).val() === "7day") {
-          add_new_markers(604800);
-        } else if ($(this).val() === "1day") {
-          add_new_markers(86400);
-        } else if ($(this).val() === "6hour") {
-          add_new_markers(21600);
-        } else if ($(this).val() === "1hour") {
-          add_new_markers(3600);
-        } else if ($(this).val() === "30min") {
-          add_new_markers(1800);
-        }
-      });
-
-      function repeat_add_new_markers(past_seconds) {
-        setInterval(function () {
-          add_new_markers(past_seconds)
-        }, Number(past_seconds) * 1000);
-      }
-
-      add_new_markers('0');
-
-      window.onload = function() {
-        repeat_add_new_markers('{{refresh_period_seconds}}');
-      };
+    // Ajout initial des marqueurs avec rafraîchissement toutes les 3 secondes après le chargement de la page
+    add_new_markers('0');
+    window.onload = function() {
+    setInterval(function() {
+        repeat_add_new_markers(3); // 3 secondes
+    }, 3000); // 3000 millisecondes = 3 secondes
+};
 
     </script>
 

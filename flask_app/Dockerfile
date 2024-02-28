@@ -1,25 +1,25 @@
 FROM python:3.7-slim-buster
 
-# Create directories
+# Créer les répertoires
 RUN mkdir -pv /home/project/flask_app \
     && mkdir -pv /var/ttn_tracker/ssl_certs
 
-# Set working directory
+# Définir le répertoire de travail
 WORKDIR /home/project/flask_app
 
-# Set environment variables
+# Définir les variables d'environnement
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install build tools and SQLite
+# Installer les outils de compilation et SQLite
 RUN apt-get update && apt-get install -y build-essential sqlite3
 
-# Copy requirements and install dependencies
+# Copier les dépendances et installer les bibliothèques requises
 COPY requirements.txt /home/project/flask_app/
 RUN pip install --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
-# Copy the application code
+# Copier le code de l'application
 COPY . /home/project/flask_app/
 
-# Run SSL certificate generation script
+# Exécuter le script de génération de certificats SSL
 RUN /bin/bash /home/project/flask_app/ssl-certs-generate.sh

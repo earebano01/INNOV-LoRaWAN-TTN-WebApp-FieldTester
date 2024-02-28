@@ -1,23 +1,26 @@
-import datetime
-import json
-import logging
-import os
-import requests
-from apscheduler.schedulers.background import BackgroundScheduler
-from dateutil.parser import parser
-from flask import Flask, jsonify, render_template
-from flask_sqlalchemy import SQLAlchemy
-from math import atan2, cos, radians, sin, sqrt
+import datetime                                                             # Importation du module pour la gestion des dates et heures
+import json                                                                 # Importation du module pour la manipulation de données JSON
+import logging                                                              # Importation du module pour la journalisation des événements
+import os                                                                   # Importation du module pour les opérations sur le système d'exploitation
+import requests                                                             # Importation du module pour les requêtes HTTP
+from apscheduler.schedulers.background import BackgroundScheduler           # Importation du planificateur d'arrière-plan
+from dateutil.parser import parser                                          # Importation du parseur de dates
+from flask import Flask, jsonify, render_template                           # Importation de la classe Flask pour la création d'une application Web, jsonify pour la génération de réponses JSON et render_template pour le rendu des modèles HTML
+from flask_sqlalchemy import SQLAlchemy                                     # Importation de SQLAlchemy pour la gestion des bases de données SQL
+from math import atan2, cos, radians, sin, sqrt                             # Importation de fonctions mathématiques
 
 from config import app_key, application, bing_api_key, cluster, config_app, devices, gateway_locations, path_db, refresh_period_seconds, start_lat, start_lon
 
+# Configuration du journal d'événements
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
 logger = logging.getLogger(__name__)
 
+# Configuration de l'application Flask
 app = config_app(Flask(__name__, template_folder="./templates"))
 db = SQLAlchemy(app)
 app.app_context().push()
 
+# Planification de la récupération des nouvelles données
 def schedule_get_new_data():
     get_new_data()
 
@@ -26,7 +29,7 @@ scheduler = BackgroundScheduler()
 job = scheduler.add_job(schedule_get_new_data, 'interval', days=1)
 scheduler.start()
 
-
+# Définition de la classe de modèle de données pour les localisations
 class Location(db.Model):
     __tablename__ = "location"
 
@@ -62,7 +65,7 @@ class Location(db.Model):
             'snr': self.snr                
         }
 
-
+# Définition de la classe de modèle de données pour la dernière acquisition
 class LastAcquisition(db.Model):
     __tablename__ = "last_data"
 
@@ -95,11 +98,11 @@ class LastAcquisition(db.Model):
             'snr': self.snr                  
         }
 
-
+# Création de la base de données si elle n'existe pas
 if not os.path.exists(path_db):
     db.create_all()
 
-
+# Route pour la page principale affichant la carte
 @app.route('/map')
 def main_page():
     get_new_data()
@@ -112,7 +115,7 @@ def main_page():
                            start_lat=start_lat,
                            start_lon=start_lon)
 
-
+# Route pour récupérer les données passées
 @app.route('/past/<seconds>')
 def get_past_data(seconds):
     if seconds_from_last() > 10:
@@ -125,7 +128,7 @@ def get_past_data(seconds):
         markers = Location.query.filter(Location.added_at > past_dt_object).all()
     return jsonify([i.serialize for i in markers])
 
-
+# Fonction pour récupérer de nouvelles données
 def get_new_data():
     last_seconds = seconds_from_last()
     if last_seconds is not None:  
@@ -190,7 +193,7 @@ def get_new_data():
     set_date_now()
 
 
-
+# Fonction pour définir la date actuelle
 def set_date_now():
     date_last = LastAcquisition.query.first()
     if not date_last:
@@ -201,15 +204,15 @@ def set_date_now():
         date_last.last_datetime = datetime.datetime.now()
         db.session.commit()
 
-
+# Fonction pour calculer le nombre de secondes depuis la dernière acquisition
 def seconds_from_last():
     date_last = LastAcquisition.query.first()
     if date_last:
         return (datetime.datetime.now() - date_last.last_datetime).total_seconds()
 
-
+# Fonction pour calculer la distance entre deux coordonnées géographiques
 def distance_coordinates(lat1, lon1, lat2, lon2):
-    # approximate radius of earth in km
+    # Rayon approximatif de la Terre en km
     R = 6373.0
 
     lat1 = radians(lat1)
@@ -227,7 +230,7 @@ def distance_coordinates(lat1, lon1, lat2, lon2):
 
     return distance  # km
 
-
+# Point d'entrée de l'application
 if __name__ == '__main__':
     db.create_all()
     app.run(debug=True, host='0.0.0.0', port=8000)
