@@ -204,17 +204,17 @@
             if (jqXHR.status !== 204) {
                 for (var i = 0; i < data.length; i++) {
                     var rssi = parseInt(data[i]["rssi"]);
-                    var color = 'blue'; 
+                    var color = '#0000FF'; 
                     if (rssi > -100) {
-                        color = 'red';
+                        color = '#FF0000';
                     } else if (rssi > -105) { 
-                        color = 'orange'; 
+                        color = '#FF7F00'; 
                     } else if (rssi > -110) { 
-                        color = 'yellow'; 
+                        color = '#FFFF00'; 
                     } else if (rssi > -115) { 
-                        color = 'green'; 
+                        color = '#00FF00'; 
                     } else if (rssi > -120) { 
-                        color = 'lightblue'; 
+                        color = '#00FFFF'; 
                     }                
 
                     var node = L.circleMarker([parseFloat(data[i]["latitude"]), parseFloat(data[i]["longitude"])], {
