@@ -15,8 +15,8 @@ devices = [ # Liste des appareils
 ]
 
 gateway_locations = [ # Emplacements des passerelles
-    ('Gateway 01', 47.6211945, -65.67475),
-    ('Gateway 02', 47.6516938, -65.67487)
+    ('ccnb-ido-gw', 47.6211945, -65.67475),
+    ('KonaGWInnov', 47.6516938, -65.67487)
 ]
 
 bing_api_key = 'AvYvx0oLrNB_CUoKLJibjitGAD7bB4o8i1bJMsPJodKBW2FftQUNSjB-Kfp9aQ8y' # Clé API Bing Maps
