@@ -8,6 +8,7 @@ from dateutil.parser import parser                                          # Im
 from flask import Flask, jsonify, render_template                           # Importation de la classe Flask pour la création d'une application Web, jsonify pour la génération de réponses JSON et render_template pour le rendu des modèles HTML
 from flask_sqlalchemy import SQLAlchemy                                     # Importation de SQLAlchemy pour la gestion des bases de données SQL
 from math import atan2, cos, radians, sin, sqrt                             # Importation de fonctions mathématiques
+from flask import jsonify
 
 from config import app_key, application, bing_api_key, cluster, config_app, devices, gateway_locations, path_db, refresh_period_seconds, start_lat, start_lon
 
@@ -103,10 +104,10 @@ if not os.path.exists(path_db):
     db.create_all()
 
 # Route pour la page principale affichant la carte
-@app.route('/map')
+@app.route('/carte')
 def main_page():
     get_new_data()
-    return render_template('map.html',
+    return render_template('carte.html',
                            bing_api_key=bing_api_key,
                            devices=devices,
                            gateway_locations=gateway_locations,
@@ -229,6 +230,24 @@ def distance_coordinates(lat1, lon1, lat2, lon2):
     distance = R * c
 
     return distance  # km
+
+# Function to generate heatmap data
+def generateHeatmapData(locations):
+    heatmapData = []
+    for location in locations:
+        lat = float(location.latitude)
+        lon = float(location.longitude)
+        rssi = location.rssi  # Assuming rssi is a field in the Location model
+        if lat and lon and rssi is not None:  # Ensure latitude, longitude, and rssi are not None
+            heatmapData.append([lat, lon, rssi])  # Append lat, lon, and rssi to heatmapData
+    return heatmapData
+
+# Route for retrieving heatmap data
+@app.route('/heatmap')
+def heatmap_data():
+    locations = Location.query.all()
+    heatmap_data = generateHeatmapData(locations)
+    return jsonify(heatmap_data)
 
 # Point d'entrée de l'application
 if __name__ == '__main__':
