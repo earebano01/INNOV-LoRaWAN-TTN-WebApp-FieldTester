@@ -25,7 +25,6 @@ app.app_context().push()
 def schedule_get_new_data():
     get_new_data()
 
-
 scheduler = BackgroundScheduler()
 job = scheduler.add_job(schedule_get_new_data, 'interval', days=1)
 scheduler.start()
@@ -231,19 +230,20 @@ def distance_coordinates(lat1, lon1, lat2, lon2):
 
     return distance  # km
 
-# Function to generate heatmap data
+
+# Fonction pour générer les données de heatmap
 def generateHeatmapData(locations):
     heatmapData = []
     for location in locations:
         lat = float(location.latitude)
         lon = float(location.longitude)
-        rssi = location.rssi  # Assuming rssi is a field in the Location model
-        if lat and lon and rssi is not None:  # Ensure latitude, longitude, and rssi are not None
-            heatmapData.append([lat, lon, rssi])  # Append lat, lon, and rssi to heatmapData
+        rssi = location.rssi
+        if lat and lon and rssi is not None:
+            heatmapData.append([lat, lon, rssi])  # Ajouter lat, lon et rssi à heatmapData
     return heatmapData
 
-# Route for retrieving heatmap data
-@app.route('/heatmap')
+# Route pour récupérer les données de heatmap
+@app.route('/heatmap_data')
 def heatmap_data():
     locations = Location.query.all()
     heatmap_data = generateHeatmapData(locations)

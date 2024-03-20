@@ -69,12 +69,10 @@
     <!-- Élément de la carte -->
     <div id="mapid" style="height: 98vh; width: 100%"></div>
     <div class="heatmap"></div>
-    <canvas id="legendCanvas" width="100" height="10"></canvas>
-    <img id="gradientImg" src="" alt="Gradient">
-    <div class="tooltip"></div>
+    <!-- <canvas id="legendCanvas" width="100" height="10"></canvas> -->
     
     <script src="https://cdn.jsdelivr.net/npm/heatmapjs@2.0.2/heatmap.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/leaflet-heatmap@1.0.0/leaflet-heatmap.js"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/leaflet-heatmap@1.0.0/leaflet-heatmap.js"></script> -->
 
     <!-- Script JavaScript pour configurer la carte et gérer les interactions -->
     <script>
@@ -239,16 +237,16 @@
       };
       legend_devices.addTo(map);
 
-      // Add a listener to control layers to detect when "Heatmap" is selected
+      // Ajouter un écouteur pour contrôler les calques afin de détecter lorsque "Heatmap" est sélectionné.
       map.on('overlayadd', function(eventLayer){
           if (eventLayer.name === 'Heatmap') {
               addHeatmapLayer();
           }
       });
 
-      // Function to add heatmap layer
+      // Fonction pour ajouter un calque de heatmap
       function addHeatmapLayer() {
-          fetch('/heatmap') // Fetch heatmap data from Flask route
+          fetch('/heatmap_data') // Récupérer les données de heatmap à partir de la route Flask
               .then(response => response.json())
               .then(data => {
                   var gradient = {
@@ -261,16 +259,16 @@
 
                   var heat = L.heatLayer(data, {
                       radius: 80,
-                      minOpacity: 0.4, // Adjust minimum opacity
-                      gradient: gradient // Use the defined gradient colors
-                  }).addTo(map); // Add heatmap layer to map
+                      minOpacity: 0.4, // Ajuster l'opacité minimale
+                      gradient: gradient // Utiliser les couleurs de gradient définies
+                  }).addTo(map); // Ajouter le calque de heatmap à la carte
               });
       }
 
-        // Call addHeatmapLayer function to add heatmap to map
+        // Appeler la fonction addHeatmapLayer pour ajouter la heatmap à la carte
         addHeatmapLayer();
 
-        // Define legend title content
+        // Définir le contenu du titre de la légende
         var legendContent = `
             <table>
               <tbody>
@@ -326,7 +324,7 @@
               </tbody>
             </table>`;
 
-        // Control for the legend of displayed devices on the map
+        // Contrôle pour la légende des appareils affichés sur la carte
         var legend_devices = L.control({position: 'bottomleft'});
         legend_devices.onAdd = function(map) {
             var div = L.DomUtil.create('div', 'legend-container');
@@ -336,7 +334,7 @@
         legend_devices.addTo(map);
 
 
-    // Fonction pour ajouter de nouveaux marqueurs sur la carte en fonction du nombre de secondes passées
+        // Fonction pour ajouter de nouveaux marqueurs sur la carte en fonction du nombre de secondes écoulées
         function add_new_markers(past_seconds) {
         var url = '/past/' + past_seconds;
         $.getJSON(url,
