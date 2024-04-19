@@ -7,19 +7,20 @@ start_lon = -65.67496 # Longitude de départ
 
 cluster = "nam1" # Cluster utilisé
 
-application = "ncrc-1173-mkrwan-1310" # Application utilisée
-app_key = "NNSXS.T4KWNY3LYSGIGS6YI3ES57QIB3SZ63C43QKMMXY.RKU3O2I6J5SRIK535YXWS4R7TPDBYQK5X4OFWEGNBGCHTOKW3OWQ" # Clé d'application
+application = "" # Application utilisée
+app_key = "" # Clé d'application
 
 devices = [ # Liste des appareils
-    "eui-a8610a34363a9216"
+    ""
 ]
 
 gateway_locations = [ # Emplacements des passerelles
     ('ccnb-ido-gw', 47.6211945, -65.67475),
-    ('KonaGWInnov', 47.6516938, -65.67487)
+    ('KonaGWInnov', 47.6516938, -65.67487),
+    ('casa-blanca', 47.611232, -65.62742)
 ]
 
-bing_api_key = 'AvYvx0oLrNB_CUoKLJibjitGAD7bB4o8i1bJMsPJodKBW2FftQUNSjB-Kfp9aQ8y' # Clé API Bing Maps
+bing_api_key = '' # Clé API Bing Maps
 
 
 def config_app(app):
